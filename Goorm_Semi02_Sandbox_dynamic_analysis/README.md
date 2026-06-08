@@ -168,7 +168,7 @@
 |------|------|------|
 | `agent.js` | Frida 메모리 계측 스크립트 (DEX 덤프 트리거) | 팀원 담당 |
 | `threat_signature.py` | 카테고리별 악성 행위 정규식 딕셔너리 | 본인 담당 |
-| `deepguard_emulator.bat` | Genymotion 에뮬레이터 구동 배치 스크립트 | 팀원 담당 |
+| `deepguard_emulator.bat` | Genymotion 에뮬레이터 구동 배치 스크립트 | 본인 담당 |
 
 ---
 
