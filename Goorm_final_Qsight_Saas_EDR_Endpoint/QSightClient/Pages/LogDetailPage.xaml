@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="QSightClient.Pages.LogDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:QSightClient.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="20">
+
+        <!--<StackPanel Orientation="Horizontal" Margin="20,10,0,10">
+            <Button x:Name="BackButton" 
+            Click="BackButton_Click"
+            Content="" 
+            FontFamily="Segoe MDL2 Assets" 
+            FontSize="16"
+            Background="Transparent"
+            VerticalAlignment="Center"/>
+            <TextBlock Text="Scan Detail" 
+               FontSize="24" 
+               FontWeight="Bold" 
+               Margin="15,0,0,0" 
+               VerticalAlignment="Center"/>
+
+            <TextBlock Text="File"/>
+            <TextBlock x:Name="FileText"/>
+
+            <TextBlock Text="Scan Time"/>
+            <TextBlock x:Name="TimeText"/>
+
+            <TextBlock Text="Result"/>
+            <TextBlock x:Name="ResultText"/>
+
+        </StackPanel>-->
+
+        <StackPanel Spacing="12">
+
+            <TextBlock
+            Text="Scan Detail"
+            FontSize="24"
+            FontWeight="Bold"/>
+
+            <TextBlock Text="File"/>
+            <TextBlock x:Name="FileText"/>
+
+            <TextBlock Text="Scan Time"/>
+            <TextBlock x:Name="TimeText"/>
+
+            <TextBlock Text="Result"/>
+            <TextBlock x:Name="ResultText"/>
+
+        </StackPanel>
+
+    </Grid>
+</Page>

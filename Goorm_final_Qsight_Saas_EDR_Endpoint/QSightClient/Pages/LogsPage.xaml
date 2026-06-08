@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="QSightClient.Pages.LogsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:QSightClient.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="20">
+
+        <StackPanel Spacing="12">
+
+            <TextBlock
+            Text="Scan Logs"
+            FontSize="24"
+            FontWeight="Bold"/>
+
+            <ListView
+                x:Name="LogsList"
+                ItemClick="LogsList_ItemClick"
+                IsItemClickEnabled="True">
+
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+
+                        <StackPanel>
+
+                            <TextBlock Text="{Binding TimeStamp}" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding FileName}" FontSize="12"/>
+
+                        </StackPanel>
+
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+
+            </ListView>
+
+        </StackPanel>
+
+    </Grid>
+</Page>

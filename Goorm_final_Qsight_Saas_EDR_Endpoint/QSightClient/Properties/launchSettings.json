@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "QSightClient (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "QSightClient (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
