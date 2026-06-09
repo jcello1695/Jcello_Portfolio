@@ -1,18 +1,72 @@
 # Q-Sight: SaaS 기반 EDR 솔루션 (Final Project)
 
-> **담당 파트:** PM / API 스펙 및 DB 스키마 설계 / 브랜치 전략 수립 / 코드 통합 (`main.py` 및 전체 통합)
+> **담당 파트:** PM / Windows 시스템 에이전트 구현 (C++) / API 스펙 및 DB 스키마 설계 / 브랜치 전략 수립 / 코드 통합
 
 Windows 엔드포인트에서 다운로드되는 파일을 `FileSystemWatcher`로 실시간 감시하고 VirusTotal SHA-256 정적 분석을 통해 위협 여부를 판별하는 SaaS 형태의 EDR 보안 솔루션입니다.
 
 ---
 
-## PM 및 통합 기여 상세
+## PM 및 기술 기여 상세
+
+### Windows 시스템 에이전트 직접 구현 (C++)
+
+`QAgent` 클래스 기반으로 프로세스 생성, 파일 변조, 레지스트리 변경, 외부 네트워크 통신을 멀티스레드로 실시간 추적하는 Windows 에이전트를 직접 구현했습니다. Windows API를 직접 호출하여 탐지 결과를 JSON 리포트(`QReport`)로 반환하는 전체 파이프라인을 설계했습니다.
+
+| 추적 대상 | 사용 Windows API | 탐지 내용 |
+|-----------|-----------------|-----------|
+| 프로세스 생성 | `CreateToolhelp32Snapshot` | 자식 프로세스 생성, 쉘 실행 여부 |
+| 파일 변조 | `ReadDirectoryChangesW` | 파일 신규 생성, 기존 파일 변조 여부 |
+| 레지스트리 변경 | `RegNotifyChangeKeyValue` | Run 키 등 지속성 확보 시도 탐지 |
+| 네트워크 통신 | `GetExtendedTcpTable` | 외부 C2 서버 통신 여부 |
+
+**멀티스레드 비동기 추적 구조**
+4개 추적 루프를 각각 독립 스레드로 실행하여 추적 항목 간 블로킹 없이 병렬로 동작하도록 설계했습니다.
+
+```cpp
+void Start(std::wstring watch_path) {
+    is_running = true;
+    workers.push_back(std::thread(&QAgent::TraceProcessLoop, this));
+    workers.push_back(std::thread(&QAgent::TraceFileLoop, this, watch_path));
+    workers.push_back(std::thread(&QAgent::TraceRegistryLoop, this));
+    workers.push_back(std::thread(&QAgent::TraceNetworkLoop, this));
+}
+```
+
+**JSON 리포트 스키마 (`QReport`)**
+탐지된 이벤트를 아래 구조로 정형화하여 반환합니다.
+
+```json
+{
+  "analysis_id": "uuid-...",
+  "meta": { "file_name": "", "sha256": "", "size": 0 },
+  "environment": { "vm_os": "Windows 10 x64", "vm_id": "vm-01" },
+  "behavior": {
+    "process_events": [],
+    "file_events": [],
+    "registry_events": [],
+    "network_events": []
+  },
+  "detection": {
+    "verdict": "malicious",
+    "score": 82,
+    "attack_type": ["ransomware"],
+    "matched_rules": ["RUN_KEY_PERSISTENCE", "C2_CONNECTION"]
+  },
+  "user_security_profile": {
+    "total_downloaded": 42,
+    "scan_count": 40,
+    "policy_violation_score": 12
+  }
+}
+```
+
+---
 
 ### API 스펙 및 DB 스키마 사전 설계
 팀 개발 착수 전, 백엔드·프론트엔드·분석 파트가 동시에 작업할 수 있도록 API 명세와 PostgreSQL 스키마를 사전에 정의했습니다. 파트 간 연동 오류와 소통 병목을 최소화하여 마일스톤을 유지했습니다.
 
 ### 브랜치 전략 수립 및 크로스팀 코드 리뷰
-Git 브랜치 전략(feature / develop / main)을 수립하고 C#·Python 이기종 기술 스택 간 크로스팀 코드 리뷰를 주도했습니다. 통합 충돌을 사전에 방지하여 안정적인 병합 환경을 구성했습니다.
+Git 브랜치 전략(feature / develop / main)을 수립하고 C#·C++·Python 이기종 기술 스택 간 크로스팀 코드 리뷰를 주도했습니다. 통합 충돌을 사전에 방지하여 안정적인 병합 환경을 구성했습니다.
 
 ### 공백 리스크 관리 및 코드 통합
 마감 직전 팀원 공백 발생 시, 해당 파트의 분석 내용과 코드를 밤새 파악하여 유기적으로 결합했습니다. 솔루션 완성도를 유지한 채 발표와 시스템 구축을 완수했습니다.
@@ -30,6 +84,7 @@ Git 브랜치 전략(feature / develop / main)을 수립하고 C#·Python 이기
 - **자동 파일 감시** — Downloads 폴더를 `FileSystemWatcher`로 실시간 모니터링, 신규 파일 감지 시 자동 스캔
 - **우클릭 스캔** — Windows Shell Extension을 통한 "Q-Sight 분석" 컨텍스트 메뉴 제공
 - **정적 분석 (VirusTotal)** — SHA-256 해시 기반 VirusTotal API v3 조회, `clean / malicious / unknown` 3단계 결과 반환
+- **Windows 에이전트 동적 분석** — 프로세스·파일·레지스트리·네트워크 4개 레이어 실시간 추적
 - **화이트리스트 관리** — SHA-256 기반 신뢰 파일 등록, 등록 파일 스캔 생략
 - **스캔 로그** — 결과를 메모리 및 로컬 JSON 파일(Desktop/QSightLogs)에 자동 저장
 - **대시보드** — 기간별 스캔 통계 및 위협 현황 조회
@@ -52,6 +107,11 @@ Git 브랜치 전략(feature / develop / main)을 수립하고 C#·Python 이기
 
 [QSightShell (COM Shell Extension)]
   └─ 우클릭 메뉴 → Named Pipe 전송 → IPCService
+
+[QSight Agent (C++)]
+  ├─ QAgent             — 4개 추적 루프 멀티스레드 실행
+  ├─ QManager           — 이벤트 데이터 수집 및 관리
+  └─ QReport            — JSON 리포트 생성
 
 [FastAPI Backend (main.py)]
   ├─ POST /scans                        — 스캔 레코드 생성
@@ -78,7 +138,8 @@ Git 브랜치 전략(feature / develop / main)을 수립하고 C#·Python 이기
 4. POST /scans → scan_id 발급
 5. POST /scans/{id}/uploads/complete → VirusTotal API 조회
 6. GET /scans/{id} polling → static_result 확인 (최대 20초, 2초 간격)
-7. 결과 저장 (LogService) 및 UI 업데이트
+7. QAgent 동적 분석 병렬 실행 → JSON 리포트 반환
+8. 결과 저장 (LogService) 및 UI 업데이트
 ```
 
 **분석 결과 판정 기준**
@@ -96,6 +157,7 @@ Git 브랜치 전략(feature / develop / main)을 수립하고 C#·Python 이기
 
 | 영역 | 기술 |
 |------|------|
+| Windows 에이전트 | C++, Windows API, nlohmann/json |
 | 클라이언트 | C#, WinUI 3, .NET |
 | Shell Extension | SharpShell (COM), Named Pipe |
 | 백엔드 | Python, FastAPI |
@@ -110,6 +172,11 @@ Git 브랜치 전략(feature / develop / main)을 수립하고 C#·Python 이기
 
 ```
 QSight.sln
+├── QSightAgent/
+│   └── Qsight_agentC.cpp   # Windows 시스템 에이전트 (C++)
+│       ├── QManager        # 이벤트 데이터 수집 클래스
+│       ├── QAgent          # 4개 추적 루프 (프로세스/파일/레지스트리/네트워크)
+│       └── QReport         # JSON 리포트 생성 클래스
 ├── QSightClient/
 │   ├── Services/
 │   │   ├── AgentService.cs
@@ -120,14 +187,7 @@ QSight.sln
 │   │   ├── WhiteListService.cs
 │   │   └── LogService.cs
 │   ├── Models/
-│   │   ├── ScanLog.cs
-│   │   ├── ScanRequest.cs
-│   │   └── IPCMessage.cs
 │   └── Pages/
-│       ├── ScanPage.xaml
-│       ├── LogsPage.xaml
-│       ├── StatusPage.xaml
-│       └── AboutPage.xaml
 ├── QSightShell/
 │   └── QSightContextMenu.cs
 ├── PipeTestSender/
@@ -171,15 +231,13 @@ pip install fastapi uvicorn psycopg2-binary redis requests python-dotenv
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-상태 확인은 `/health` 및 `/health/deep` 엔드포인트로 확인합니다.
-
 ### 클라이언트 실행
 
 Visual Studio에서 `QSight.sln` 열기 → `QSightClient`를 시작 프로젝트로 설정 후 실행
 
 ### Shell Extension 등록
 
-관리자 권한 PowerShell에서 아래 명령을 실행합니다.
+관리자 권한 PowerShell에서 실행합니다.
 
 ```
 regasm QSightShell.dll /codebase
@@ -206,7 +264,7 @@ regasm QSightShell.dll /codebase
 
 | 이름 | 역할 |
 |------|------|
-| 정철호 | PM / API 스펙 설계 / 브랜치 전략 / 코드 통합 |
+| 정철호 | PM / C++ 에이전트 구현 / API 스펙 설계 / 브랜치 전략 / 코드 통합 |
 | 정선구 | 백엔드 (FastAPI, DB) |
 | 문현규 | 동적 분석 |
 | 이승용 | WinUI 프론트엔드 |
